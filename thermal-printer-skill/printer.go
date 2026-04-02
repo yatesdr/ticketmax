@@ -23,23 +23,6 @@ const (
 	printerDotWidth   = 384 // 384 dots for standard 80mm thermal paper
 )
 
-// Connection wraps a network/serial connection to the printer.
-type Connection struct {
-	conn      io.WriteCloser
-	closeFunc func() error
-}
-
-func (c *Connection) Write(data []byte) (int, error) {
-	return c.conn.Write(data)
-}
-
-func (c *Connection) Close() error {
-	if c.closeFunc != nil {
-		return c.closeFunc()
-	}
-	return nil
-}
-
 // TextStyle defines how text should be formatted.
 type TextStyle struct {
 	Bold         bool
@@ -51,16 +34,16 @@ type TextStyle struct {
 
 // Printer handles ESC/POS commands for a thermal receipt printer.
 type Printer struct {
-	conn        *Connection
+	w           io.Writer
 	paperWidth  int  // characters per line (default 42 for 80mm paper)
 	lineSpacing byte // line spacing in printer units (0 = use printer default)
 }
 
-// NewPrinter returns a Printer that writes ESC/POS commands to conn.
+// NewPrinter returns a Printer that writes ESC/POS commands to w.
 // Default line spacing is 20 (~2.8mm) for tight, high-density output.
-func NewPrinter(conn *Connection) *Printer {
+func NewPrinter(w io.Writer) *Printer {
 	return &Printer{
-		conn:        conn,
+		w:           w,
 		paperWidth:  42,
 		lineSpacing: 20,
 	}
@@ -82,7 +65,7 @@ func sanitize(text string) string {
 
 // Initialize resets the printer and applies configured line spacing.
 func (p *Printer) Initialize() error {
-	if _, err := p.conn.Write([]byte{escByte, '@'}); err != nil {
+	if _, err := p.w.Write([]byte{escByte, '@'}); err != nil {
 		return fmt.Errorf("write init command: %w", err)
 	}
 	if p.lineSpacing > 0 {
@@ -97,13 +80,12 @@ func (p *Printer) Initialize() error {
 // Each unit is 1/180 inch on most printers. Default is ~30 (4.2mm).
 // Use 20 for tight output (~2.8mm), 16 for very tight (~2.3mm).
 func (p *Printer) SetLineSpacing(n byte) error {
-	_, err := p.conn.Write([]byte{escByte, '3', n})
+	_, err := p.w.Write([]byte{escByte, '3', n})
 	if err != nil {
 		return fmt.Errorf("write line spacing: %w", err)
 	}
 	return nil
 }
-
 
 // Beep triggers the printer's buzzer (ESC B n t).
 // times = number of beeps (1-9), duration = length per beep in ~100ms units (1-9).
@@ -120,7 +102,7 @@ func (p *Printer) Beep(times, duration byte) error {
 	if duration > 9 {
 		duration = 9
 	}
-	_, err := p.conn.Write([]byte{escByte, 'B', times, duration})
+	_, err := p.w.Write([]byte{escByte, 'B', times, duration})
 	if err != nil {
 		return fmt.Errorf("write beep: %w", err)
 	}
@@ -129,7 +111,7 @@ func (p *Printer) Beep(times, duration byte) error {
 
 // FeedLines advances the paper by n lines (ESC d n).
 func (p *Printer) FeedLines(n byte) error {
-	_, err := p.conn.Write([]byte{escByte, 'd', n})
+	_, err := p.w.Write([]byte{escByte, 'd', n})
 	if err != nil {
 		return fmt.Errorf("write feed: %w", err)
 	}
@@ -155,44 +137,44 @@ func (p *Printer) PrintStyledText(text string, style TextStyle) error {
 		modeByte |= 0x10
 	}
 
-	if _, err := p.conn.Write([]byte{escByte, '!', modeByte}); err != nil {
+	if _, err := p.w.Write([]byte{escByte, '!', modeByte}); err != nil {
 		return fmt.Errorf("set print mode: %w", err)
 	}
 
 	// Use the printer's native centering command so double-width text
 	// is centered correctly (manual space-padding breaks with wide fonts).
 	if style.Centered {
-		if _, err := p.conn.Write([]byte{escByte, 'a', 1}); err != nil {
+		if _, err := p.w.Write([]byte{escByte, 'a', 1}); err != nil {
 			return fmt.Errorf("set center alignment: %w", err)
 		}
 	}
 
 	if style.Underline {
-		if _, err := p.conn.Write([]byte{escByte, '-', 1}); err != nil {
+		if _, err := p.w.Write([]byte{escByte, '-', 1}); err != nil {
 			return fmt.Errorf("set underline: %w", err)
 		}
 	}
 
 	sanitized := sanitize(text)
-	if _, err := p.conn.Write([]byte(sanitized)); err != nil {
+	if _, err := p.w.Write([]byte(sanitized)); err != nil {
 		return fmt.Errorf("write text: %w", err)
 	}
-	if _, err := p.conn.Write([]byte{lfByte}); err != nil {
+	if _, err := p.w.Write([]byte{lfByte}); err != nil {
 		return fmt.Errorf("write line feed: %w", err)
 	}
 
 	// Reset every mode that was set, in reverse order.
 	if style.Underline {
-		if _, err := p.conn.Write([]byte{escByte, '-', 0}); err != nil {
+		if _, err := p.w.Write([]byte{escByte, '-', 0}); err != nil {
 			return fmt.Errorf("reset underline: %w", err)
 		}
 	}
 	if style.Centered {
-		if _, err := p.conn.Write([]byte{escByte, 'a', 0}); err != nil {
+		if _, err := p.w.Write([]byte{escByte, 'a', 0}); err != nil {
 			return fmt.Errorf("reset alignment: %w", err)
 		}
 	}
-	if _, err := p.conn.Write([]byte{escByte, '!', 0x00}); err != nil {
+	if _, err := p.w.Write([]byte{escByte, '!', 0x00}); err != nil {
 		return fmt.Errorf("reset print mode: %w", err)
 	}
 
@@ -238,13 +220,12 @@ func (p *Printer) PrintLine(text string) error {
 
 // printRawLine writes already-sanitized text followed by a line feed.
 func (p *Printer) printRawLine(text string) error {
-	if _, err := p.conn.Write([]byte(text)); err != nil {
+	if _, err := p.w.Write([]byte(text)); err != nil {
 		return err
 	}
-	_, err := p.conn.Write([]byte{lfByte})
+	_, err := p.w.Write([]byte{lfByte})
 	return err
 }
-
 
 // PrintSeparator prints a full-width horizontal rule.
 func (p *Printer) PrintSeparator() error {
@@ -261,7 +242,10 @@ func (p *Printer) PrintQRCode(data string) error {
 }
 
 // PrintImage resizes img to the printer's dot width and prints it as a
-// monochrome raster bitmap.
+// monochrome raster bitmap. Images are centered using ESC a 1 before
+// printing, which some printers honour for raster data. The image is
+// always resized to the full dot width so centering has no visual effect
+// for full-width images but is correct for printers that add margins.
 func (p *Printer) PrintImage(img image.Image) error {
 	bounds := img.Bounds()
 	srcW := bounds.Dx()
@@ -278,10 +262,23 @@ func (p *Printer) PrintImage(img image.Image) error {
 	if newH <= 0 {
 		newH = 1
 	}
+	if newH > maxImageDimension {
+		return fmt.Errorf("resized image height %d exceeds maximum %d", newH, maxImageDimension)
+	}
 
 	dst := nearestNeighborResize(img, printerDotWidth, newH)
 
-	return p.printRasterImage(dst)
+	// Center-align before raster print; reset to left after.
+	if _, err := p.w.Write([]byte{escByte, 'a', 1}); err != nil {
+		return fmt.Errorf("set center alignment: %w", err)
+	}
+	if err := p.printRasterImage(dst); err != nil {
+		return err
+	}
+	if _, err := p.w.Write([]byte{escByte, 'a', 0}); err != nil {
+		return fmt.Errorf("reset alignment: %w", err)
+	}
+	return nil
 }
 
 // printRasterImage converts img to 1-bit monochrome and sends it with GS v 0.
@@ -297,7 +294,7 @@ func (p *Printer) printRasterImage(img image.Image) error {
 		byte(bytesPerLine & 0xFF), byte((bytesPerLine >> 8) & 0xFF),
 		byte(height & 0xFF), byte((height >> 8) & 0xFF),
 	}
-	if _, err := p.conn.Write(header); err != nil {
+	if _, err := p.w.Write(header); err != nil {
 		return fmt.Errorf("write raster header: %w", err)
 	}
 
@@ -315,7 +312,7 @@ func (p *Printer) printRasterImage(img image.Image) error {
 				lineData[x/8] |= 1 << uint(7-(x%8))
 			}
 		}
-		if _, err := p.conn.Write(lineData); err != nil {
+		if _, err := p.w.Write(lineData); err != nil {
 			return fmt.Errorf("write raster line %d: %w", y-bounds.Min.Y, err)
 		}
 	}
@@ -326,19 +323,19 @@ func (p *Printer) printRasterImage(img image.Image) error {
 // PrintImageFromFile decodes an image file and prints it.
 // Only regular files are accepted to prevent reading device nodes or pipes.
 func (p *Printer) PrintImageFromFile(path string) error {
-	info, err := os.Stat(path)
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("open image file: %w", err)
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
 	if err != nil {
 		return fmt.Errorf("stat image file: %w", err)
 	}
 	if !info.Mode().IsRegular() {
 		return fmt.Errorf("not a regular file: %s", path)
 	}
-
-	f, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("open image file: %w", err)
-	}
-	defer f.Close()
 
 	img, _, err := image.Decode(f)
 	if err != nil {
@@ -348,13 +345,15 @@ func (p *Printer) PrintImageFromFile(path string) error {
 	return p.PrintImage(img)
 }
 
-// CutPaper feeds a few lines (so text clears the cutter) then partial-cuts.
+// CutPaper feeds a few lines so text clears the cutter, then issues a
+// partial cut (GS V 1). Partial cut leaves a small tab so the receipt
+// does not fall to the floor.
 func (p *Printer) CutPaper() error {
 	// Feed 3 lines so the last printed line is visible above the tear bar.
 	if err := p.FeedLines(3); err != nil {
 		return fmt.Errorf("pre-cut feed: %w", err)
 	}
-	_, err := p.conn.Write([]byte{gsByte, 'V', 0})
+	_, err := p.w.Write([]byte{gsByte, 'V', 1})
 	if err != nil {
 		return fmt.Errorf("write cut command: %w", err)
 	}

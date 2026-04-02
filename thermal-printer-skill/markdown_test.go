@@ -442,7 +442,7 @@ https://dashboard.example.com
 	}
 
 	// Verify we get the expected sequence of element types.
-	wantTypes := []string{
+	wantTypes := []ElementType{
 		elemTitle,     // # Morning Report
 		elemFeed,      // blank
 		elemTitle,     // ## Sales
@@ -485,7 +485,7 @@ func TestPrintMarkdown_Simple(t *testing.T) {
 		t.Fatalf("PrintMarkdown: %v", err)
 	}
 
-	data := mock.buf.Bytes()
+	data := mock.Bytes()
 
 	// Should contain the title text.
 	if !bytes.Contains(data, []byte("Test")) {
@@ -496,7 +496,7 @@ func TestPrintMarkdown_Simple(t *testing.T) {
 		t.Error("missing body text")
 	}
 	// Should end with the cut sequence (ESC d 3 + GS V 0).
-	cutSeq := []byte{escByte, 'd', 3, gsByte, 'V', 0}
+	cutSeq := []byte{escByte, 'd', 3, gsByte, 'V', 1}
 	if !bytes.HasSuffix(data, cutSeq) {
 		t.Error("output does not end with cut sequence")
 	}
@@ -510,10 +510,10 @@ func TestPrintMarkdown_NoDuplicateCut(t *testing.T) {
 		t.Fatalf("PrintMarkdown: %v", err)
 	}
 
-	data := mock.buf.Bytes()
+	data := mock.Bytes()
 	// CutPaper now sends: ESC d 3 (feed) + GS V 0 (cut)
 	// Count occurrences of the full cut sequence.
-	cutSeq := []byte{escByte, 'd', 3, gsByte, 'V', 0}
+	cutSeq := []byte{escByte, 'd', 3, gsByte, 'V', 1}
 	count := 0
 	for i := 0; i <= len(data)-len(cutSeq); i++ {
 		if bytes.Equal(data[i:i+len(cutSeq)], cutSeq) {
@@ -534,16 +534,15 @@ func TestPrintMarkdown_AutoCut(t *testing.T) {
 	}
 
 	// CutPaper sends ESC d 3 + GS V 0
-	cutSeq := []byte{escByte, 'd', 3, gsByte, 'V', 0}
-	if !bytes.HasSuffix(mock.buf.Bytes(), cutSeq) {
+	cutSeq := []byte{escByte, 'd', 3, gsByte, 'V', 1}
+	if !bytes.HasSuffix(mock.Bytes(), cutSeq) {
 		t.Error("expected auto-cut at end")
 	}
 }
 
 func TestPrintMarkdown_ErrorPropagation(t *testing.T) {
 	ew := &errorWriter{failAfter: 0}
-	conn := &Connection{conn: ew, closeFunc: ew.Close}
-	p := NewPrinter(conn)
+	p := NewPrinter(ew)
 
 	err := p.PrintMarkdown("# Hello")
 	if err == nil {

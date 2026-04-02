@@ -30,15 +30,14 @@ thermal-printer -test
 
 ## Flags
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-type` | Connection type: network | `network` (env: `PRINTER_TYPE`) |
-| `-addr` | Printer address | `127.0.0.1:9100` (env: `PRINTER_ADDR`) |
-| `-timeout` | Connection timeout | `5s` |
-| `-width` | Paper width in characters | `42` |
-| `-spacing` | Line spacing in printer units (lower = tighter) | `20` |
-| `-test` | Print test receipt | |
-| `-status` | Check connectivity | |
+| Flag | Default | Description |
+|---|---|---|
+| `-addr` | `127.0.0.1:9100` | Printer host:port (env: `PRINTER_ADDR`) |
+| `-timeout` | `5s` | Connection timeout |
+| `-width` | `42` | Paper width in characters (1–120) |
+| `-spacing` | `20` | Line spacing in printer units (0–255) |
+| `-test` | | Print test receipt and exit |
+| `-status` | | Check connectivity and exit |
 
 ## Markdown Syntax
 

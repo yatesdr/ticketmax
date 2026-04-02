@@ -1,5 +1,7 @@
 # Binaries
 thermal-printer
+thermal-printer-skill
+build/
 *.exe
 *.dll
 *.so

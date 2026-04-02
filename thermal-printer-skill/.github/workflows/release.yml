@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: linux-amd64
+            archive: tar.gz
+          - goos: linux
+            goarch: arm64
+            suffix: linux-arm64
+            archive: tar.gz
+          - goos: windows
+            goarch: amd64
+            suffix: windows-amd64
+            archive: zip
+          - goos: darwin
+            goarch: amd64
+            suffix: darwin-amd64
+            archive: tar.gz
+          - goos: darwin
+            goarch: arm64
+            suffix: darwin-arm64
+            archive: tar.gz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          BINARY_NAME=thermal-printer
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME=thermal-printer.exe
+          fi
+          go build -ldflags "-s -w -X main.Version=${{ github.ref_name }}" \
+            -o ${BINARY_NAME} .
+          chmod +x ${BINARY_NAME} 2>/dev/null || true
+
+      - name: Package (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        run: |
+          tar -czvf thermal-printer-${{ matrix.suffix }}.tar.gz thermal-printer README.md
+
+      - name: Package (zip)
+        if: matrix.archive == 'zip'
+        run: |
+          zip thermal-printer-${{ matrix.suffix }}.zip thermal-printer.exe README.md
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: thermal-printer-${{ matrix.suffix }}
+          path: thermal-printer-${{ matrix.suffix }}.${{ matrix.archive }}
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          for dir in artifacts/*/; do
+            cp "$dir"* release/
+          done
+          cd release
+          sha256sum * > checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/*
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

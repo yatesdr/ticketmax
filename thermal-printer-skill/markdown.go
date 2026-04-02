@@ -6,24 +6,27 @@ import (
 	"strings"
 )
 
+// ElementType identifies the kind of printable unit produced by the parser.
+type ElementType string
+
 // Element types produced by the markdown parser.
 const (
-	elemTitle     = "title"
-	elemText      = "text"
-	elemBold      = "bold"
-	elemSeparator = "separator"
-	elemColumns   = "columns"
-	elemImage     = "image"
-	elemQRCode    = "qrcode"
-	elemFeed      = "feed"
-	elemCut       = "cut"
-	elemUnderline = "underline"
-	elemBeep      = "beep"
+	elemTitle     ElementType = "title"
+	elemText      ElementType = "text"
+	elemBold      ElementType = "bold"
+	elemSeparator ElementType = "separator"
+	elemColumns   ElementType = "columns"
+	elemImage     ElementType = "image"
+	elemQRCode    ElementType = "qrcode"
+	elemFeed      ElementType = "feed"
+	elemCut       ElementType = "cut"
+	elemUnderline ElementType = "underline"
+	elemBeep      ElementType = "beep"
 )
 
 // Element is a single printable unit parsed from markdown.
 type Element struct {
-	Type      string
+	Type      ElementType
 	Text      string
 	Style     TextStyle
 	Values    []string // column values
@@ -355,19 +358,19 @@ func stripInlineMarkup(s string) string {
 
 // stripHTMLTag removes matched <tag>...</tag> pairs from s.
 func stripHTMLTag(s, tag string) string {
-	open := "<" + tag + ">"
-	close := "</" + tag + ">"
+	openTag := "<" + tag + ">"
+	closeTag := "</" + tag + ">"
 	for {
-		start := strings.Index(s, open)
+		start := strings.Index(s, openTag)
 		if start < 0 {
 			return s
 		}
-		end := strings.Index(s[start+len(open):], close)
+		end := strings.Index(s[start+len(openTag):], closeTag)
 		if end < 0 {
 			return s
 		}
-		end += start + len(open)
-		s = s[:start] + s[start+len(open):end] + s[end+len(close):]
+		end += start + len(openTag)
+		s = s[:start] + s[start+len(openTag):end] + s[end+len(closeTag):]
 	}
 }
 
@@ -379,10 +382,10 @@ func isFullLineUnderline(s string) bool {
 
 // parseBeepDirective extracts the beep count from <!-- beep --> or <!-- beep N -->.
 func parseBeepDirective(s string) int {
-	// Extract content between <!-- and -->
+	// Extract content between <!-- and -->.
 	start := strings.Index(s, "<!--")
 	end := strings.Index(s, "-->")
-	if start < 0 || end < 0 {
+	if start < 0 || end < 0 || end <= start+4 {
 		return 1
 	}
 	inner := strings.TrimSpace(s[start+4 : end])

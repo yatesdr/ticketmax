@@ -1,6 +1,7 @@
-# ticketmax — thermal receipt printer CLI
+# thermal-printer — ESC/POS receipt printer CLI
 
-Print markdown files to an ESC/POS thermal receipt printer. Designed for RONGTA printers, works with any ESC/POS compatible device.
+Print markdown files to a thermal receipt printer over TCP. Designed for
+RONGTA printers; works with any ESC/POS compatible device on port 9100.
 
 ## Quick Start
 
@@ -9,21 +10,21 @@ cd thermal-printer-skill
 go build -o thermal-printer
 
 # Check printer connectivity
-./thermal-printer -addr=192.168.1.100:9100 -status
+./thermal-printer -addr 192.168.1.100:9100 -status
 
-# Print a test receipt
-./thermal-printer -addr=192.168.1.100:9100 -test
+# Print a test receipt (exercises all formatting features)
+./thermal-printer -addr 192.168.1.100:9100 -test
 
 # Print a markdown file
-./thermal-printer -addr=192.168.1.100:9100 examples/morning-report.md
+./thermal-printer -addr 192.168.1.100:9100 examples/morning-report.md
 
 # Pipe from stdin
-cat report.md | ./thermal-printer -addr=192.168.1.100:9100 -
+cat report.md | ./thermal-printer -addr 192.168.1.100:9100 -
 ```
 
 ## Configuration
 
-Set environment variables to avoid passing flags every time:
+Set environment variables to avoid repeating flags:
 
 ```bash
 export PRINTER_ADDR=192.168.1.100:9100
@@ -33,7 +34,7 @@ export PRINTER_ADDR=192.168.1.100:9100
 ## Markdown Syntax
 
 | Markdown | Printer Output |
-|----------|---------------|
+|---|---|
 | `# Heading` | Bold, double-size, centered |
 | `## Heading` | Bold, double-width, centered |
 | `### Heading` | Bold |
@@ -42,32 +43,40 @@ export PRINTER_ADDR=192.168.1.100:9100
 | `---` | Separator |
 | `\| A \| B \|` | Two columns |
 | `\| A \| B \| C \|` | Three columns |
-| `![alt](path)` | Print image |
-| `` ```qr `` | QR code |
+| `![alt](path)` | Print image (PNG, JPEG, GIF) |
+| `` ```qr `` | QR code block |
 | `<!-- cut -->` | Cut paper |
 | `<!-- beep -->` | Buzzer (1 beep) |
 | `<!-- beep N -->` | Buzzer (N beeps) |
 
 ## Flags
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-addr` | Printer IP:port | `127.0.0.1:9100` (env: `PRINTER_ADDR`) |
-| `-timeout` | Connection timeout | `5s` |
-| `-width` | Paper width in characters | `42` |
-| `-spacing` | Line spacing in printer units | `20` (tight) |
-| `-test` | Print test receipt and exit | |
-| `-status` | Check connectivity and exit | |
+| Flag | Default | Description |
+|---|---|---|
+| `-addr` | `127.0.0.1:9100` | Printer host:port (env: `PRINTER_ADDR`) |
+| `-timeout` | `5s` | Connection timeout |
+| `-width` | `42` | Paper width in characters (1–120) |
+| `-spacing` | `20` | Line spacing in printer units (0–255) |
+| `-test` | | Print test receipt and exit |
+| `-status` | | Check connectivity and exit |
 
 ### Line Spacing
 
-The `-spacing` flag controls line density. Each unit is 1/180 inch on most printers.
+The `-spacing` flag controls line density. Each unit is approximately
+1/180 inch on most printers.
+
+| Value | Density |
+|---|---|
+| `0` | Printer default |
+| `16` | Very tight (~2.3 mm) |
+| `20` | Tight (~2.8 mm) — **default** |
+| `30` | Normal (~4.2 mm) |
 
 ```bash
-./thermal-printer -spacing=20 report.md   # tight (default)
-./thermal-printer -spacing=16 report.md   # very tight
-./thermal-printer -spacing=30 report.md   # normal
-./thermal-printer -spacing=0  report.md   # printer default
+./thermal-printer -spacing 20 report.md   # tight (default)
+./thermal-printer -spacing 16 report.md   # very tight
+./thermal-printer -spacing 30 report.md   # normal
+./thermal-printer -spacing 0  report.md   # printer default
 ```
 
 ## Integration
@@ -96,4 +105,4 @@ See `examples/` for ready-to-use templates:
 ## Supported Printers
 
 - RONGTA ESC/POS compatible models
-- Any printer supporting standard ESC/POS protocol over TCP port 9100
+- Any printer supporting standard ESC/POS over TCP port 9100

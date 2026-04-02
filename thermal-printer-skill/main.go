@@ -7,9 +7,11 @@ import (
 	"log"
 	"net"
 	"os"
-	"strings"
 	"time"
 )
+
+// Version is set at build time via -ldflags "-X main.Version=...".
+var Version = "dev"
 
 func envOrDefault(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
@@ -19,20 +21,20 @@ func envOrDefault(key, fallback string) string {
 }
 
 func main() {
-	connType := flag.String("type", envOrDefault("PRINTER_TYPE", "network"),
-		"Connection type: network (env: PRINTER_TYPE)")
 	addr := flag.String("addr", envOrDefault("PRINTER_ADDR", "127.0.0.1:9100"),
-		"Printer address (env: PRINTER_ADDR)")
+		"Printer address as host:port (env: PRINTER_ADDR)")
 	timeout := flag.Duration("timeout", 5*time.Second,
 		"Network connection timeout")
 	width := flag.Int("width", 42,
-		"Paper width in characters")
+		"Paper width in characters (1-120)")
 	spacing := flag.Int("spacing", 20,
-		"Line spacing in printer units (default 20=tight, 30=normal, 0=printer default)")
+		"Line spacing in printer units (0=printer default, 16=very tight, 20=tight, 30=normal)")
 	test := flag.Bool("test", false,
 		"Print a test receipt and exit")
 	status := flag.Bool("status", false,
 		"Check printer connectivity and exit")
+	version := flag.Bool("version", false,
+		"Print version and exit")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: thermal-printer [flags] <file.md | ->\n\n")
@@ -58,9 +60,21 @@ func main() {
 
 	flag.Parse()
 
+	if *version {
+		fmt.Println("thermal-printer " + Version)
+		return
+	}
+
+	if *width < 1 || *width > 120 {
+		log.Fatalf("invalid width %d: must be between 1 and 120", *width)
+	}
+	if *spacing < 0 || *spacing > 255 {
+		log.Fatalf("invalid spacing %d: must be between 0 and 255", *spacing)
+	}
+
 	// --status: check connectivity and exit.
 	if *status {
-		if err := checkStatus(*connType, *addr, *timeout); err != nil {
+		if err := checkStatus(*addr, *timeout); err != nil {
 			fmt.Fprintf(os.Stderr, "FAIL: %v\n", err)
 			os.Exit(1)
 		}
@@ -69,9 +83,9 @@ func main() {
 	}
 
 	// Connect to printer.
-	conn, err := connectPrinter(*connType, *addr, *timeout)
+	conn, err := net.DialTimeout("tcp", *addr, *timeout)
 	if err != nil {
-		log.Fatalf("connect: %v", err)
+		log.Fatalf("connect: dial %s: %v", *addr, err)
 	}
 	defer conn.Close()
 
@@ -119,18 +133,18 @@ func readInput(args []string) (string, error) {
 		r = os.Stdin
 	case len(args) == 1:
 		path := args[0]
-		info, err := os.Stat(path)
+		f, err := os.Open(path)
+		if err != nil {
+			return "", fmt.Errorf("open %q: %w", path, err)
+		}
+		defer f.Close()
+		info, err := f.Stat()
 		if err != nil {
 			return "", fmt.Errorf("stat %q: %w", path, err)
 		}
 		if !info.Mode().IsRegular() {
 			return "", fmt.Errorf("not a regular file: %s", path)
 		}
-		f, err := os.Open(path)
-		if err != nil {
-			return "", fmt.Errorf("open %q: %w", path, err)
-		}
-		defer f.Close()
 		r = f
 	default:
 		return "", fmt.Errorf("expected one file argument, got %d", len(args))
@@ -143,28 +157,10 @@ func readInput(args []string) (string, error) {
 	return string(data), nil
 }
 
-func connectPrinter(connType, addr string, timeout time.Duration) (*Connection, error) {
-	switch strings.ToLower(connType) {
-	case "network":
-		return dialNetwork(addr, timeout)
-	default:
-		return nil, fmt.Errorf("unsupported connection type: %s (only network is supported)", connType)
-	}
-}
-
-func dialNetwork(addr string, timeout time.Duration) (*Connection, error) {
+func checkStatus(addr string, timeout time.Duration) error {
 	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
-		return nil, fmt.Errorf("dial %s: %w", addr, err)
+		return fmt.Errorf("dial %s: %w", addr, err)
 	}
-	return &Connection{conn: conn, closeFunc: conn.Close}, nil
-}
-
-func checkStatus(connType, addr string, timeout time.Duration) error {
-	conn, err := connectPrinter(connType, addr, timeout)
-	if err != nil {
-		return err
-	}
-	conn.Close()
-	return nil
+	return conn.Close()
 }
