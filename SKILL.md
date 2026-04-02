@@ -1,5 +1,5 @@
 ---
-name: thermal-printer
+name: ticketmax
 description: Print markdown files to a RONGTA ESC/POS thermal receipt printer. Supports headings, bold, tables, images, and QR codes.
 user-invocable: true
 command-dispatch: tool
@@ -13,19 +13,19 @@ Print markdown files to a thermal receipt printer.
 
 ```bash
 # Print a markdown file
-thermal-printer report.md
+ticketmax report.md
 
 # Pipe from stdin
-cat report.md | thermal-printer -
+cat report.md | ticketmax -
 
 # Generate and print on the fly
-echo "# Alert\n\n**Server down**" | thermal-printer -
+echo "# Alert\n\n**Server down**" | ticketmax -
 
 # Check printer connectivity
-thermal-printer -status
+ticketmax -status
 
 # Print a test receipt
-thermal-printer -test
+ticketmax -test
 ```
 
 ## Flags
@@ -84,10 +84,10 @@ Any software that can write a markdown file or pipe text to stdout can print:
 
 ```bash
 # From a script
-shingo export --format=md | thermal-printer -
+shingo export --format=md | ticketmax -
 
 # From a cron job
-thermal-printer /path/to/daily-report.md
+ticketmax /path/to/daily-report.md
 
 # From OpenClaw bot
 @bot write a morning report in markdown and print it

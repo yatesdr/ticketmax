@@ -7,28 +7,28 @@ for RONGTA printers, works with any ESC/POS compatible device on port 9100.
 
 ```bash
 # Build
-go build -o thermal-printer .
+go build -o ticketmax .
 
 # Set your printer address (or pass -addr each time)
 export PRINTER_ADDR=192.168.1.100:9100
 
 # Check printer connectivity
-thermal-printer -status
+ticketmax -status
 
 # Print a test receipt (exercises all formatting)
-thermal-printer -test
+ticketmax -test
 
 # Print a markdown file
-thermal-printer examples/morning-report.md
+ticketmax examples/morning-report.md
 
 # Pipe from stdin
-echo "# Hello World" | thermal-printer -
+echo "# Hello World" | ticketmax -
 ```
 
 ## Usage
 
 ```
-thermal-printer [flags] <file.md | ->
+ticketmax [flags] <file.md | ->
 ```
 
 Read from a file or pipe markdown to stdin with `-`.
@@ -104,10 +104,10 @@ print receipts directly. Any tool that writes markdown can print:
 
 ```bash
 # From a script
-your-app export --format=md | thermal-printer -
+your-app export --format=md | ticketmax -
 
 # From a cron job
-thermal-printer /path/to/daily-report.md
+ticketmax /path/to/daily-report.md
 ```
 
 ## Examples

@@ -37,7 +37,7 @@ func main() {
 		"Print version and exit")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: thermal-printer [flags] <file.md | ->\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: ticketmax [flags] <file.md | ->\n\n")
 		fmt.Fprintf(os.Stderr, "Print a markdown file to an ESC/POS thermal receipt printer.\n")
 		fmt.Fprintf(os.Stderr, "Use - to read from stdin.\n\n")
 		fmt.Fprintf(os.Stderr, "Flags:\n")
@@ -61,7 +61,7 @@ func main() {
 	flag.Parse()
 
 	if *version {
-		fmt.Println("thermal-printer " + Version)
+		fmt.Println("ticketmax " + Version)
 		return
 	}
 

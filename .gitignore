@@ -1,6 +1,5 @@
 # Binaries
-thermal-printer
-thermal-printer-skill
+ticketmax
 build/
 *.exe
 *.dll

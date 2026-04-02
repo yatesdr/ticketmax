@@ -50,9 +50,9 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          BINARY_NAME=thermal-printer
+          BINARY_NAME=ticketmax
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            BINARY_NAME=thermal-printer.exe
+            BINARY_NAME=ticketmax.exe
           fi
           go build -ldflags "-s -w -X main.Version=${{ github.ref_name }}" \
             -o ${BINARY_NAME} .
@@ -61,18 +61,18 @@ jobs:
       - name: Package (tar.gz)
         if: matrix.archive == 'tar.gz'
         run: |
-          tar -czvf thermal-printer-${{ matrix.suffix }}.tar.gz thermal-printer README.md
+          tar -czvf ticketmax-${{ matrix.suffix }}.tar.gz ticketmax README.md
 
       - name: Package (zip)
         if: matrix.archive == 'zip'
         run: |
-          zip thermal-printer-${{ matrix.suffix }}.zip thermal-printer.exe README.md
+          zip ticketmax-${{ matrix.suffix }}.zip ticketmax.exe README.md
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: thermal-printer-${{ matrix.suffix }}
-          path: thermal-printer-${{ matrix.suffix }}.${{ matrix.archive }}
+          name: ticketmax-${{ matrix.suffix }}
+          path: ticketmax-${{ matrix.suffix }}.${{ matrix.archive }}
 
   release:
     name: Release

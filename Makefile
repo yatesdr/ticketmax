@@ -1,7 +1,7 @@
-# thermal-printer Makefile
+# ticketmax Makefile
 # Cross-platform builds for ESC/POS thermal printer CLI
 
-BINARY_NAME=thermal-printer
+BINARY_NAME=ticketmax
 VERSION?=dev
 BUILD_DIR=build
 
@@ -67,7 +67,7 @@ vet:
 
 # Show help
 help:
-	@echo "thermal-printer build targets:"
+	@echo "ticketmax build targets:"
 	@echo "  make build     - Build for current platform"
 	@echo "  make all       - Build for all platforms (linux, windows, macos)"
 	@echo "  make linux     - Build for Linux (amd64, arm64)"
