@@ -1,0 +1,17 @@
+# Binaries
+thermal-printer
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+vendor/
+*.go.sum
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
