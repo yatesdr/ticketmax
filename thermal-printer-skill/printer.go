@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -79,43 +78,6 @@ func sanitize(text string) string {
 		}
 	}
 	return b.String()
-}
-
-// PrintReport prints a formatted report with title, timestamp, and content.
-func (p *Printer) PrintReport(title, content string) error {
-	if err := p.Initialize(); err != nil {
-		return fmt.Errorf("initialize: %w", err)
-	}
-
-	titleStyle := TextStyle{Bold: true, DoubleWidth: true, DoubleHeight: true, Centered: true}
-	if err := p.PrintStyledText(title, titleStyle); err != nil {
-		return fmt.Errorf("print title: %w", err)
-	}
-
-	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	if err := p.PrintStyledText(timestamp, TextStyle{Centered: true}); err != nil {
-		return fmt.Errorf("print timestamp: %w", err)
-	}
-
-	if err := p.PrintSeparator(); err != nil {
-		return fmt.Errorf("print separator: %w", err)
-	}
-
-	if content != "" {
-		if err := p.PrintText(content); err != nil {
-			return fmt.Errorf("print content: %w", err)
-		}
-	}
-
-	if err := p.PrintSeparator(); err != nil {
-		return fmt.Errorf("print footer: %w", err)
-	}
-
-	if err := p.CutPaper(); err != nil {
-		return fmt.Errorf("cut paper: %w", err)
-	}
-
-	return nil
 }
 
 // Initialize resets the printer and applies configured line spacing.
@@ -442,12 +404,6 @@ func nearestNeighborResize(src image.Image, dstW, dstH int) *image.NRGBA {
 		}
 	}
 	return dst
-}
-
-// grayValue returns the luminance of c in the range [0, 0xFFFF].
-func grayValue(c color.Color) uint32 {
-	r, g, b, _ := c.RGBA()
-	return (299*r + 587*g + 114*b) / 1000
 }
 
 // PrintTestReceipt prints a receipt that exercises all formatting features.

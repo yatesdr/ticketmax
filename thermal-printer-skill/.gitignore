@@ -7,7 +7,6 @@ thermal-printer
 
 # Go
 vendor/
-*.go.sum
 .DS_Store
 
 # IDE

@@ -1,114 +1,99 @@
-# Thermal Printer Skill
+# ticketmax — thermal receipt printer CLI
 
-A Go-based OpenClaw skill for printing morning reports to a RONGTA thermal receipt printer.
+Print markdown files to an ESC/POS thermal receipt printer. Designed for RONGTA printers, works with any ESC/POS compatible device.
 
 ## Quick Start
 
-### 1. Build the application
-
 ```bash
-go mod download
+cd thermal-printer-skill
 go build -o thermal-printer
+
+# Check printer connectivity
+./thermal-printer -addr=192.168.1.100:9100 -status
+
+# Print a test receipt
+./thermal-printer -addr=192.168.1.100:9100 -test
+
+# Print a markdown file
+./thermal-printer -addr=192.168.1.100:9100 examples/morning-report.md
+
+# Pipe from stdin
+cat report.md | ./thermal-printer -addr=192.168.1.100:9100 -
 ```
-
-### 2. Find your printer's IP
-
-The RONGTA printer will print its network configuration on startup. Find the IP address (usually `192.168.x.x`).
-
-Alternatively, scan your network:
-```bash
-arp-scan --localnet | grep -i rongta
-```
-
-### 3. Test the connection
-
-```bash
-./thermal-printer -type=network -addr=192.168.1.100:9100 \
-  -title="Test" \
-  -content="If you see this, printer works!"
-```
-
-## Installation as OpenClaw Skill
-
-1. Copy this directory to your OpenClaw workspace:
-   ```bash
-   cp -r thermal-printer-skill ~/.openclaw/skills/thermal-printer
-   # or
-   cp -r thermal-printer-skill ~/my-workspace/skills/thermal-printer
-   ```
-
-2. Build the binary in the skill directory:
-   ```bash
-   cd ~/.openclaw/skills/thermal-printer
-   go build -o thermal-printer
-   ```
-
-3. Your bot can now use it:
-   ```
-   @bot print a morning report to the thermal printer with these sales figures...
-   ```
 
 ## Configuration
 
-Set environment variables for your printer:
+Set environment variables to avoid passing flags every time:
 
 ```bash
-export PRINTER_TYPE=network
 export PRINTER_ADDR=192.168.1.100:9100
+./thermal-printer examples/morning-report.md
 ```
 
-Or pass them directly to the command:
+## Markdown Syntax
+
+| Markdown | Printer Output |
+|----------|---------------|
+| `# Heading` | Bold, double-size, centered |
+| `## Heading` | Bold, double-width, centered |
+| `### Heading` | Bold |
+| `**bold text**` | Bold line |
+| `<u>text</u>` | Underlined line |
+| `---` | Separator |
+| `\| A \| B \|` | Two columns |
+| `\| A \| B \| C \|` | Three columns |
+| `![alt](path)` | Print image |
+| `` ```qr `` | QR code |
+| `<!-- cut -->` | Cut paper |
+| `<!-- beep -->` | Buzzer (1 beep) |
+| `<!-- beep N -->` | Buzzer (N beeps) |
+
+## Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-addr` | Printer IP:port | `127.0.0.1:9100` (env: `PRINTER_ADDR`) |
+| `-timeout` | Connection timeout | `5s` |
+| `-width` | Paper width in characters | `42` |
+| `-spacing` | Line spacing in printer units | `20` (tight) |
+| `-test` | Print test receipt and exit | |
+| `-status` | Check connectivity and exit | |
+
+### Line Spacing
+
+The `-spacing` flag controls line density. Each unit is 1/180 inch on most printers.
+
 ```bash
-./thermal-printer -type=network -addr=192.168.1.100:9100 -content="Report text"
+./thermal-printer -spacing=20 report.md   # tight (default)
+./thermal-printer -spacing=16 report.md   # very tight
+./thermal-printer -spacing=30 report.md   # normal
+./thermal-printer -spacing=0  report.md   # printer default
 ```
 
-## Advanced Usage
+## Integration
 
-### Print formatted reports
+Any software that writes markdown can print receipts:
 
-Create a report file and print it:
 ```bash
-./thermal-printer -type=network -addr=192.168.1.100:9100 \
-  -title="Daily Sales" \
-  -content="sales_report.txt"
+# From a script
+your-app export --format=md | ./thermal-printer -
+
+# From a cron job
+./thermal-printer /path/to/daily-report.md
+
+# As an OpenClaw skill
+@bot write a morning report and print it
 ```
 
-### Generate reports from the bot
+## Examples
 
-The bot can generate content and pipe it to the printer. Example from OpenClaw:
-```
-Generate today's sales summary and print it to the thermal printer
-```
+See `examples/` for ready-to-use templates:
+
+- `morning-report.md` — daily sales, inventory alerts, QR dashboard link
+- `sales-receipt.md` — customer receipt with totals
+- `shift-summary.md` — hourly breakdown with handoff notes
 
 ## Supported Printers
 
-- RONGTA models with network/USB/serial connectivity
-- Any ESC/POS compatible thermal receipt printer
-
-## Troubleshooting
-
-### Printer not found
-- Verify IP address: ping the printer IP
-- Check firewall: ensure port 9100 is accessible
-- Test with: `nc -zv 192.168.1.100 9100`
-
-### Nothing prints
-- Check paper is loaded
-- Verify printer is powered on and connected to network
-- Try a simple test: `./thermal-printer -list`
-
-### Permission issues (serial)
-```bash
-sudo usermod -a -G dialout $USER
-# Then logout and login again
-```
-
-## ESC/POS Protocol
-
-The printer uses the ESC/POS protocol. Key commands:
-- `ESC @` - Initialize
-- `ESC !` - Select print mode (size, bold, etc)
-- `GS V` - Cut paper
-- `LF` - Line feed
-
-Extend `printer.go` to add more formatting options.
+- RONGTA ESC/POS compatible models
+- Any printer supporting standard ESC/POS protocol over TCP port 9100

@@ -20,7 +20,7 @@ func envOrDefault(key, fallback string) string {
 
 func main() {
 	connType := flag.String("type", envOrDefault("PRINTER_TYPE", "network"),
-		"Connection type: network, serial, usb (env: PRINTER_TYPE)")
+		"Connection type: network (env: PRINTER_TYPE)")
 	addr := flag.String("addr", envOrDefault("PRINTER_ADDR", "127.0.0.1:9100"),
 		"Printer address (env: PRINTER_ADDR)")
 	timeout := flag.Duration("timeout", 5*time.Second,
@@ -147,10 +147,8 @@ func connectPrinter(connType, addr string, timeout time.Duration) (*Connection, 
 	switch strings.ToLower(connType) {
 	case "network":
 		return dialNetwork(addr, timeout)
-	case "serial", "usb":
-		return dialSerial(addr)
 	default:
-		return nil, fmt.Errorf("unknown connection type: %s", connType)
+		return nil, fmt.Errorf("unsupported connection type: %s (only network is supported)", connType)
 	}
 }
 
@@ -160,10 +158,6 @@ func dialNetwork(addr string, timeout time.Duration) (*Connection, error) {
 		return nil, fmt.Errorf("dial %s: %w", addr, err)
 	}
 	return &Connection{conn: conn, closeFunc: conn.Close}, nil
-}
-
-func dialSerial(port string) (*Connection, error) {
-	return nil, fmt.Errorf("serial connection not yet implemented — use -type=network")
 }
 
 func checkStatus(connType, addr string, timeout time.Duration) error {

@@ -32,10 +32,11 @@ thermal-printer -test
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-type` | Connection: network, serial, usb | `network` (env: `PRINTER_TYPE`) |
+| `-type` | Connection type: network | `network` (env: `PRINTER_TYPE`) |
 | `-addr` | Printer address | `127.0.0.1:9100` (env: `PRINTER_ADDR`) |
 | `-timeout` | Connection timeout | `5s` |
 | `-width` | Paper width in characters | `42` |
+| `-spacing` | Line spacing in printer units (lower = tighter) | `20` |
 | `-test` | Print test receipt | |
 | `-status` | Check connectivity | |
 
@@ -47,12 +48,15 @@ thermal-printer -test
 | `## Heading` | Bold, double-width, centered |
 | `### Heading` | Bold |
 | `**bold text**` | Bold line |
+| `<u>text</u>` | Underlined line |
 | `---` | Separator line |
 | `\| A \| B \|` | Two columns |
 | `\| A \| B \| C \|` | Three columns |
 | `![alt](path)` | Print image |
 | `` ```qr `` | QR code block |
 | `<!-- cut -->` | Cut paper |
+| `<!-- beep -->` | Buzzer (1 beep) |
+| `<!-- beep N -->` | Buzzer (N beeps) |
 
 ## Example Report
 
