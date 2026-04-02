@@ -1,4 +1,4 @@
-module thermal-printer-skill
+module github.com/yatesdr/ticketmax
 
 go 1.22
 
