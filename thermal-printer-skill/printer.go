@@ -104,14 +104,6 @@ func (p *Printer) SetLineSpacing(n byte) error {
 	return nil
 }
 
-// ResetLineSpacing restores the printer's default line spacing (ESC 2).
-func (p *Printer) ResetLineSpacing() error {
-	_, err := p.conn.Write([]byte{escByte, '2'})
-	if err != nil {
-		return fmt.Errorf("write reset spacing: %w", err)
-	}
-	return nil
-}
 
 // Beep triggers the printer's buzzer (ESC B n t).
 // times = number of beeps (1-9), duration = length per beep in ~100ms units (1-9).
@@ -253,15 +245,6 @@ func (p *Printer) printRawLine(text string) error {
 	return err
 }
 
-// PrintText splits text on newlines and prints each line individually.
-func (p *Printer) PrintText(text string) error {
-	for _, line := range strings.Split(text, "\n") {
-		if err := p.PrintLine(line); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 // PrintSeparator prints a full-width horizontal rule.
 func (p *Printer) PrintSeparator() error {

@@ -308,22 +308,6 @@ func TestPrintSeparator(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// PrintText — multiline
-// ---------------------------------------------------------------------------
-
-func TestPrintText_MultiLine(t *testing.T) {
-	p, mock := newTestPrinter()
-	if err := p.PrintText("a\nb\nc"); err != nil {
-		t.Fatalf("PrintText: %v", err)
-	}
-	out := mock.buf.String()
-	lfCount := strings.Count(out, string([]byte{lfByte}))
-	if lfCount != 3 {
-		t.Errorf("expected 3 LF bytes, got %d", lfCount)
-	}
-}
-
-// ---------------------------------------------------------------------------
 // Error propagation
 // ---------------------------------------------------------------------------
 
@@ -527,16 +511,7 @@ func TestSetLineSpacing(t *testing.T) {
 	}
 }
 
-func TestResetLineSpacing(t *testing.T) {
-	p, mock := newTestPrinter()
-	if err := p.ResetLineSpacing(); err != nil {
-		t.Fatalf("ResetLineSpacing: %v", err)
-	}
-	want := []byte{escByte, '2'}
-	if !bytes.Equal(mock.buf.Bytes(), want) {
-		t.Errorf("got %v, want %v", mock.buf.Bytes(), want)
-	}
-}
+
 
 func TestFeedLines(t *testing.T) {
 	p, mock := newTestPrinter()
