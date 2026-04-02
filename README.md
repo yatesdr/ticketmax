@@ -6,9 +6,16 @@ for RONGTA printers, works with any ESC/POS compatible device on port 9100.
 ## Quick Start
 
 ```bash
-# Build
-go build -o ticketmax .
+# Install with Go
+go install github.com/yatesdr/ticketmax@latest
 
+# Or build from source
+git clone https://github.com/yatesdr/ticketmax.git
+cd ticketmax
+go build -o ticketmax .
+```
+
+```bash
 # Set your printer address (or pass -addr each time)
 export PRINTER_ADDR=192.168.1.100:9100
 
