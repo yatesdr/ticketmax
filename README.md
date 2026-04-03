@@ -1,28 +1,31 @@
 # ticketmax
 
-ESC/POS thermal receipt printer CLI. Print markdown files over TCP — designed
-for RONGTA printers, works with any ESC/POS compatible device on port 9100.
+Print markdown files to ESC/POS thermal receipt printers over TCP. Headings,
+bold, underline, tables, images, QR codes, paper cuts, and buzzer — all from
+standard `.md` files.
+
+Works with any ESC/POS printer on port 9100 (tested with Rongta).
 
 ## Quick Start
 
 ```bash
-# Install with Go
+# Install
 go install github.com/yatesdr/ticketmax@latest
 
 # Or build from source
 git clone https://github.com/yatesdr/ticketmax.git
 cd ticketmax
-go build -o ticketmax .
+make build
 ```
 
 ```bash
 # Set your printer address (or pass -addr each time)
 export PRINTER_ADDR=192.168.1.100:9100
 
-# Check printer connectivity
+# Check connectivity
 ticketmax -status
 
-# Print a test receipt (exercises all formatting)
+# Print a test receipt
 ticketmax -test
 
 # Print a markdown file
@@ -37,8 +40,6 @@ echo "# Hello World" | ticketmax -
 ```
 ticketmax [flags] <file.md | ->
 ```
-
-Read from a file or pipe markdown to stdin with `-`.
 
 ### Flags
 
@@ -73,15 +74,15 @@ The `-spacing` flag controls line density. Each unit is ~1/180 inch.
 | `**bold text**` | Bold line |
 | `<u>text</u>` | Underlined line |
 | `---` | Separator |
-| `\| A \| B \|` | Two columns |
+| `\| A \| B \|` | Two columns (right-aligned values) |
 | `\| A \| B \| C \|` | Three columns |
-| `![alt](path)` | Print image (PNG, JPEG, GIF) |
+| `![alt](path)` | Image (PNG, JPEG, GIF) |
 | `` ```qr `` | QR code block |
 | `<!-- cut -->` | Cut paper |
 | `<!-- beep -->` | Buzzer (1 beep) |
 | `<!-- beep N -->` | Buzzer (N beeps) |
 
-### Example Receipt
+### Example
 
 ```markdown
 # Morning Report
@@ -104,17 +105,21 @@ https://dashboard.example.com
 <!-- cut -->
 ```
 
-## Claude Code Skill
+## Agent Skill
 
-ticketmax includes a Claude Code skill definition (`SKILL.md`) so Claude can
-print receipts directly. Any tool that writes markdown can print:
+ticketmax includes a skill definition (`SKILL.md`) so it can be used by
+Claude Code agents and OpenClaw bots. Any tool that writes markdown can print
+to a receipt printer:
 
 ```bash
-# From a script
+# Pipe output from another tool
 your-app export --format=md | ticketmax -
 
-# From a cron job
+# Cron job
 ticketmax /path/to/daily-report.md
+
+# OpenClaw bot
+@bot write a morning report in markdown and print it
 ```
 
 ## Examples
@@ -124,6 +129,7 @@ See `examples/` for ready-to-use templates:
 - `morning-report.md` — daily sales, inventory alerts, QR dashboard link
 - `sales-receipt.md` — customer receipt with totals
 - `shift-summary.md` — hourly breakdown with handoff notes
+- `feature-test.md` — exercises every supported markdown feature
 
 ## Building
 
@@ -133,8 +139,3 @@ make all                # linux, windows, macOS (amd64 + arm64)
 make test               # run tests
 make build VERSION=1.0  # set version string
 ```
-
-## Supported Printers
-
-- RONGTA ESC/POS compatible models
-- Any printer supporting standard ESC/POS over TCP port 9100
