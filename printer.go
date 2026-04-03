@@ -199,7 +199,7 @@ func (p *Printer) PrintColumns(left, right string) error {
 	leftWidth := p.paperWidth/2 - 1
 	rightWidth := p.paperWidth - leftWidth
 
-	return p.printRawLine(fitWidth(left, leftWidth) + fitWidth(right, rightWidth))
+	return p.printRawLine(fitWidth(left, leftWidth) + fitWidthRight(right, rightWidth))
 }
 
 // PrintThreeColumns prints a three-column row padded to the full paper width.
@@ -305,7 +305,18 @@ func (p *Printer) printRasterImage(img image.Image) error {
 			lineData[i] = 0
 		}
 		for x := 0; x < width; x++ {
-			r, g, b, _ := img.At(x+bounds.Min.X, y).RGBA()
+			r, g, b, a := img.At(x+bounds.Min.X, y).RGBA()
+			// Composite against white background for transparent pixels.
+			// Values are premultiplied alpha in 0..0xFFFF.
+			if a < 0xFFFF {
+				if a == 0 {
+					r, g, b = 0xFFFF, 0xFFFF, 0xFFFF
+				} else {
+					r = r*0xFFFF/a + 0xFFFF*(0xFFFF-a)/0xFFFF
+					g = g*0xFFFF/a + 0xFFFF*(0xFFFF-a)/0xFFFF
+					b = b*0xFFFF/a + 0xFFFF*(0xFFFF-a)/0xFFFF
+				}
+			}
 			// Luminance in 0..0xFFFF; dark pixels (< midpoint) print black.
 			lum := (299*r + 587*g + 114*b) / 1000
 			if lum < 0x8000 {
@@ -360,13 +371,22 @@ func (p *Printer) CutPaper() error {
 	return nil
 }
 
-// fitWidth pads or truncates text to exactly width characters.
+// fitWidth pads or truncates text to exactly width characters (left-aligned).
 func fitWidth(text string, width int) string {
 	runes := []rune(text)
 	if len(runes) >= width {
 		return string(runes[:width])
 	}
 	return string(runes) + strings.Repeat(" ", width-len(runes))
+}
+
+// fitWidthRight pads or truncates text to exactly width characters (right-aligned).
+func fitWidthRight(text string, width int) string {
+	runes := []rune(text)
+	if len(runes) >= width {
+		return string(runes[:width])
+	}
+	return strings.Repeat(" ", width-len(runes)) + string(runes)
 }
 
 // nearestNeighborResize scales src to dstW x dstH using nearest-neighbor
