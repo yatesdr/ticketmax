@@ -1,13 +1,35 @@
 ---
 name: ticketmax
-description: Print markdown files to a RONGTA ESC/POS thermal receipt printer. Supports headings, bold, tables, images, and QR codes.
-user-invocable: true
-command-dispatch: tool
+description: Print markdown files to an ESC/POS thermal receipt printer over TCP. Supports headings, bold, underline, tables, images, QR codes, paper cuts, and buzzer.
+version: 0.1.1
+metadata:
+  openclaw:
+    emoji: "🖨️"
+    homepage: https://github.com/yatesdr/ticketmax
+    requires:
+      env:
+        - PRINTER_ADDR
+      bins:
+        - ticketmax
+    primaryEnv: PRINTER_ADDR
+    install:
+      - kind: go
+        package: github.com/yatesdr/ticketmax@latest
+        bins:
+          - ticketmax
 ---
 
-# Thermal Printer Skill
+# ticketmax
 
-Print markdown files to a thermal receipt printer.
+Print markdown files to a thermal receipt printer. Write a `.md` file with standard markdown and ticketmax renders it on any ESC/POS printer over TCP.
+
+## Setup
+
+Set `PRINTER_ADDR` to your printer's address:
+
+```bash
+export PRINTER_ADDR=192.168.1.100:9100
+```
 
 ## Usage
 
@@ -16,10 +38,7 @@ Print markdown files to a thermal receipt printer.
 ticketmax report.md
 
 # Pipe from stdin
-cat report.md | ticketmax -
-
-# Generate and print on the fly
-echo "# Alert\n\n**Server down**" | ticketmax -
+echo "# Hello World" | ticketmax -
 
 # Check printer connectivity
 ticketmax -status
@@ -42,24 +61,27 @@ ticketmax -test
 ## Markdown Syntax
 
 | Markdown | Printer Output |
-|----------|---------------|
+|---|---|
 | `# Heading` | Bold, double-size, centered |
 | `## Heading` | Bold, double-width, centered |
 | `### Heading` | Bold |
 | `**bold text**` | Bold line |
 | `<u>text</u>` | Underlined line |
 | `---` | Separator line |
-| `\| A \| B \|` | Two columns |
+| `\| A \| B \|` | Two columns (right-aligned values) |
 | `\| A \| B \| C \|` | Three columns |
-| `![alt](path)` | Print image |
+| `![alt](path)` | Print image (PNG, JPEG, GIF) |
 | `` ```qr `` | QR code block |
 | `<!-- cut -->` | Cut paper |
 | `<!-- beep -->` | Buzzer (1 beep) |
 | `<!-- beep N -->` | Buzzer (N beeps) |
 
-## Example Report
+## Example
 
-```markdown
+To print a report, write markdown to a temp file and pipe it to ticketmax:
+
+```bash
+cat <<'EOF' > /tmp/report.md
 # Morning Report
 
 ## Sales
@@ -76,19 +98,15 @@ ticketmax -test
 ```qr
 https://dashboard.example.com
 ```
+
+<!-- beep -->
+EOF
+
+ticketmax /tmp/report.md
 ```
 
-## Integration
-
-Any software that can write a markdown file or pipe text to stdout can print:
+Or pipe directly from stdin:
 
 ```bash
-# From a script
-shingo export --format=md | ticketmax -
-
-# From a cron job
-ticketmax /path/to/daily-report.md
-
-# From OpenClaw bot
-@bot write a morning report in markdown and print it
+echo "# Alert\n\n**Server down at $(date)**\n\n<!-- beep 3 -->" | ticketmax -
 ```

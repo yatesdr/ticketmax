@@ -1,0 +1,9 @@
+build/
+*.go
+go.mod
+go.sum
+Makefile
+*_test.go
+.github/
+.git/
+examples/german-shepherd.png
