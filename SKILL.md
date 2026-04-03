@@ -1,7 +1,7 @@
 ---
 name: ticketmax
 description: Print markdown files to an ESC/POS thermal receipt printer over TCP, USB, or serial. Supports headings, bold, underline, tables, images, QR codes, paper cuts, and buzzer.
-version: 0.1.2
+version: 0.1.3
 metadata:
   openclaw:
     emoji: "🖨️"
