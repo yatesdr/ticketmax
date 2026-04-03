@@ -7,7 +7,11 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime"
+	"strings"
 	"time"
+
+	"go.bug.st/serial"
 )
 
 // Version is set at build time via -ldflags "-X main.Version=...".
@@ -22,10 +26,12 @@ func envOrDefault(key, fallback string) string {
 
 func main() {
 	addr := flag.String("addr", envOrDefault("PRINTER_ADDR", "127.0.0.1:9100"),
-		"Printer address as host:port (env: PRINTER_ADDR)")
+		"Printer address as host:port, or device path (env: PRINTER_ADDR)")
+	baud := flag.Int("baud", 9600,
+		"Baud rate for serial connections (9600, 19200, 38400, 115200)")
 	timeout := flag.Duration("timeout", 5*time.Second,
 		"Network connection timeout")
-	width := flag.Int("width", 42,
+	width := flag.Int("width", 46,
 		"Paper width in characters (1-120)")
 	spacing := flag.Int("spacing", 20,
 		"Line spacing in printer units (0=printer default, 16=very tight, 20=tight, 30=normal)")
@@ -74,7 +80,7 @@ func main() {
 
 	// --status: check connectivity and exit.
 	if *status {
-		if err := checkStatus(*addr, *timeout); err != nil {
+		if err := checkStatus(*addr, *baud, *timeout); err != nil {
 			fmt.Fprintf(os.Stderr, "FAIL: %v\n", err)
 			os.Exit(1)
 		}
@@ -83,9 +89,9 @@ func main() {
 	}
 
 	// Connect to printer.
-	conn, err := net.DialTimeout("tcp", *addr, *timeout)
+	conn, err := openPrinter(*addr, *baud, *timeout)
 	if err != nil {
-		log.Fatalf("connect: dial %s: %v", *addr, err)
+		log.Fatalf("connect: %v", err)
 	}
 	defer conn.Close()
 
@@ -157,10 +163,43 @@ func readInput(args []string) (string, error) {
 	return string(data), nil
 }
 
-func checkStatus(addr string, timeout time.Duration) error {
+// isDevicePath returns true if addr looks like a device/serial path rather than
+// a network address. Matches /dev/*, COM*, com* (Windows).
+func isDevicePath(addr string) bool {
+	if strings.HasPrefix(addr, "/") {
+		return true
+	}
+	upper := strings.ToUpper(addr)
+	if strings.HasPrefix(upper, "COM") {
+		return true
+	}
+	// Windows-style paths
+	if runtime.GOOS == "windows" && len(addr) >= 2 && addr[1] == ':' {
+		return true
+	}
+	return false
+}
+
+// openPrinter opens a connection to the printer, either via TCP or serial/USB device.
+func openPrinter(addr string, baud int, timeout time.Duration) (io.WriteCloser, error) {
+	if isDevicePath(addr) {
+		port, err := serial.Open(addr, &serial.Mode{BaudRate: baud})
+		if err != nil {
+			return nil, fmt.Errorf("open %s: %w", addr, err)
+		}
+		return port, nil
+	}
 	conn, err := net.DialTimeout("tcp", addr, timeout)
 	if err != nil {
-		return fmt.Errorf("dial %s: %w", addr, err)
+		return nil, fmt.Errorf("dial %s: %w", addr, err)
+	}
+	return conn, nil
+}
+
+func checkStatus(addr string, baud int, timeout time.Duration) error {
+	conn, err := openPrinter(addr, baud, timeout)
+	if err != nil {
+		return err
 	}
 	return conn.Close()
 }

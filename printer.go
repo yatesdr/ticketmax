@@ -44,7 +44,7 @@ type Printer struct {
 func NewPrinter(w io.Writer) *Printer {
 	return &Printer{
 		w:           w,
-		paperWidth:  42,
+		paperWidth:  46,
 		lineSpacing: 20,
 	}
 }

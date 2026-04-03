@@ -1,10 +1,10 @@
 # ticketmax
 
-Print markdown files to ESC/POS thermal receipt printers over TCP. Headings,
-bold, underline, tables, images, QR codes, paper cuts, and buzzer — all from
+Print markdown files to ESC/POS thermal receipt printers. Headings, bold,
+underline, tables, images, QR codes, paper cuts, and buzzer — all from
 standard `.md` files.
 
-Works with any ESC/POS printer on port 9100 (tested with Rongta).
+Connects over TCP, USB, or serial. Works with any ESC/POS printer (tested with Rongta).
 
 ## Quick Start
 
@@ -20,7 +20,10 @@ make build
 
 ```bash
 # Set your printer address (or pass -addr each time)
+# TCP:
 export PRINTER_ADDR=192.168.1.100:9100
+# USB:    export PRINTER_ADDR=/dev/usb/lp0
+# Serial: export PRINTER_ADDR=/dev/ttyUSB0
 
 # Check connectivity
 ticketmax -status
@@ -45,9 +48,10 @@ ticketmax [flags] <file.md | ->
 
 | Flag | Default | Description |
 |---|---|---|
-| `-addr` | `127.0.0.1:9100` | Printer host:port (env: `PRINTER_ADDR`) |
-| `-timeout` | `5s` | Connection timeout |
-| `-width` | `42` | Paper width in characters (1–120) |
+| `-addr` | `127.0.0.1:9100` | Printer host:port or device path (env: `PRINTER_ADDR`) |
+| `-baud` | `9600` | Baud rate for serial connections |
+| `-timeout` | `5s` | Network connection timeout |
+| `-width` | `46` | Paper width in characters (1–120) |
 | `-spacing` | `20` | Line spacing in printer units (0–255) |
 | `-test` | | Print test receipt and exit |
 | `-status` | | Check connectivity and exit |
